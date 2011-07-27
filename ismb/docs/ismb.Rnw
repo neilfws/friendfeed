@@ -1,0 +1,224 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage[utf8x]{inputenc}
+\usepackage[top=1.5cm, bottom=1.5cm,left=2cm,right=1.5cm]{geometry}
+\usepackage{url}
+
+%opening
+\title{Statistical Analysis of ISMB Coverage at FriendFeed 2008 - 2011}
+\author{Neil Saunders}
+
+%load data
+<<echo=FALSE, results=hide>>=
+library(ggplot2)
+library(xtable)
+load("../data/i2008.RData")
+i2008.data <- entries
+rm(entries)
+load("../data/i2009.RData")
+i2009.data <- entries
+rm(entries)
+load("../data/i2010.RData")
+i2010.data <- entries
+rm(entries)
+load("../data/i2011.RData")
+i2011.data <- entries
+rm(entries)
+@
+
+%functions
+<<echo=FALSE, results=hide>>=
+# function to get comments
+getComments <- function(x) {
+  ldply(x, function(y) ldply(y$comments, data.frame))
+}
+
+# function to get entry/comment id in comments
+getIds <- function(x) {
+  x$eid <- sapply(as.character(x$id), function(y) strsplit(y, "/")[[1]][2])
+  x$cid <- sapply(as.character(x$id), function(y) strsplit(y, "/")[[1]][4])
+  x
+}
+
+# function to count posts, comments, likes
+getSummary <- function(x) {
+  x.sum <- data.frame(
+                      date = sapply(x, function(y) y$date),
+                      comments = sapply(x, function(y) length(y$comments)),
+                      likes = sapply(x, function(y) length(y$likes))
+                      )
+  x.sum
+}
+
+# function to remove keys not common to all years
+rmKeys <- function(x) {
+  x$via.name <- NULL
+  x$via.url <- NULL
+  x$from.private <- NULL
+  x
+}
+
+# function to get conference day
+getCday <- function(x) {
+  x$year <- strptime(x$date, format = "%Y-%m-%dT%H:%M:%SZ")$year + 1900
+  x$cday <- as.numeric(as.Date(x$date) - min(as.Date(x$date)))   + 1
+  x$hour <- strptime(x$date, format = "%Y-%m-%dT%H:%M:%SZ")$hour
+  x
+}
+@
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This document analyses coverage of the ISMB conference at FriendFeed, from 2008 to 2011.
+\end{abstract}
+
+\section{Posts, comments and comment/post ratio}
+<<echo=FALSE, results=hide>>=
+i2008.comments <- getComments(i2008.data)
+i2008.comments <- getIds(i2008.comments)
+i2009.comments <- getComments(i2009.data)
+i2009.comments <- getIds(i2009.comments)
+i2010.comments <- getComments(i2010.data)
+i2010.comments <- getIds(i2010.comments)
+i2011.comments <- getComments(i2011.data)
+i2011.comments <- getIds(i2011.comments)
+
+# posts, comments, ratio
+years <- data.frame(year = seq(2008,2011), posts = c(length(i2008.data),
+                    length(i2009.data), length(i2010.data), length(i2011.data)),
+                    comments = c(nrow(i2008.comments), nrow(i2009.comments),
+                      nrow(i2010.comments), nrow(i2011.comments)))
+years$ratio <- years$comments / years$posts
+years.melt  <- melt(years, "year")
+@
+
+\begin{center}
+<<fig=TRUE, echo=FALSE>>=
+print(ggplot(years.melt) + geom_bar(aes(factor(year), value, fill = variable)) +
+      facet_grid(variable ~ ., scales = "free") + theme_bw() +
+      opts(legend.position = "none", title = "ISMB posts, comments & comment/post ratio")
+      + scale_x_discrete("Year"))
+@
+\end{center}
+
+\section{Participants who commented}
+<<echo=FALSE, results=hide>>=
+commenters <- data.frame(year = seq(2008,2011),
+                         participants = c(length(unique(i2008.comments$from.id)),
+                                          length(unique(i2009.comments$from.id)),
+                                          length(unique(i2010.comments$from.id)),
+                                          length(unique(i2011.comments$from.id))
+                                          )
+                         )
+@
+
+\begin{center}
+<<fig=TRUE, echo=FALSE>>=
+print(ggplot(commenters) + geom_bar(aes(factor(year), participants), fill = "#F8766D") + theme_bw() + opts(title = "ISMB commenters 2008 - 2011") + scale_x_discrete("Year") + scale_y_continuous("commenters"))
+@
+\end{center}
+
+\section{Posts with/without comments}
+<<echo=FALSE, results=hide>>=
+i2008.sum <- getSummary(i2008.data)
+i2009.sum <- getSummary(i2009.data)
+i2010.sum <- getSummary(i2010.data)
+i2011.sum <- getSummary(i2011.data)
+i.sum     <- data.frame(year = seq(2008,2011),
+                        comment = c(nrow(subset(i2008.sum, comments > 0)),
+                                    nrow(subset(i2009.sum, comments > 0)),
+                                    nrow(subset(i2010.sum, comments > 0)),
+                                    nrow(subset(i2011.sum, comments > 0))),
+                        nocomment = c(nrow(subset(i2008.sum, comments == 0)),
+                                      nrow(subset(i2009.sum, comments == 0)),
+                                      nrow(subset(i2010.sum, comments == 0)),
+                                      nrow(subset(i2011.sum, comments == 0))))
+i.sum.melt <- melt(i.sum, id = "year")
+@
+
+\begin{center}
+<<fig=TRUE, echo=FALSE>>=
+print(ggplot(i.sum.melt) + geom_bar(aes(factor(year), value, fill = variable))
+      + theme_bw() + opts(title = "ISMB posts with/without comments 2008 - 2011")
+      + scale_x_discrete("Year"))
+@
+\end{center}
+
+\section{Comments per post}
+<<echo=FALSE, results=hide>>=
+ismb.sum <- rbind(i2008.sum, i2009.sum, i2010.sum, i2011.sum)
+ismb.sum$year <- strptime(ismb.sum$date, format = "%Y-%m-%dT%H:%M:%SZ")$year + 1900
+@
+
+\begin{center}
+<<fig=TRUE, echo=FALSE>>=
+print(ggplot(ismb.sum) + geom_boxplot(aes(factor(year), comments), fill = "#F8766D")
+      + theme_bw() + opts(title = "ISMB comments per post 2008 - 2011")
+      + scale_x_discrete("Year") + scale_y_continuous("comments/post"))
+@
+\end{center}
+
+\section{Comments per user}
+<<echo=FALSE, results=hide>>=
+ismb.comments <- rbind(rmKeys(i2008.comments), rmKeys(i2009.comments), rmKeys(i2010.comments), i2011.comments)
+ismb.comments$year <- strptime(ismb.comments$date, format = "%Y-%m-%dT%H:%M:%SZ")$year + 1900
+ismb.comcount      <- as.data.frame(table(ismb.comments$year, ismb.comments$from.id))
+colnames(ismb.comcount) <- c("year", "user", "comments")
+@
+
+\begin{center}
+<<fig=TRUE, echo=FALSE>>=
+print(ggplot(subset(ismb.comcount, comments > 0)) + geom_boxplot(aes(factor(year), comments), fill = "#F8766D") + theme_bw() + opts(title = "ISMB comments per user 2008 - 2011") + scale_x_discrete("Year") + scale_y_continuous("comments/user"))
+@
+\end{center}
+
+\begin{center}
+<<fig=TRUE, echo=FALSE>>=
+print(ggplot(ismb.comcount) + geom_density(aes(comments), fill = "#F8766D") + facet_grid(year ~ ., scales = "free") + theme_bw() + opts(title = "Density plot: ISMB comments per user 2008 - 2011"))
+@
+\end{center}
+
+\section{Comments timeline}
+<<echo=FALSE, results=hide>>=
+i2008 <- subset(i2008.comments, as.Date(date) >= as.Date("2008-07-19") & as.Date(date) <= as.Date("2008-07-23"))
+i2008 <- getCday(i2008)
+i2009 <- subset(i2009.comments, as.Date(date) >= as.Date("2009-06-27") & as.Date(date) <= as.Date("2009-07-02"))
+i2009 <- getCday(i2009)
+i2010 <- subset(i2010.comments, as.Date(date) >= as.Date("2010-07-09") & as.Date(date) <= as.Date("2010-07-13"))
+i2010 <- getCday(i2010)
+i2011 <- subset(i2011.comments, as.Date(date) >= as.Date("2011-07-15") & as.Date(date) <= as.Date("2011-07-19"))
+i2011 <- getCday(i2011)
+i.times <- rbind(rmKeys(i2008), rmKeys(i2009), rmKeys(i2010), i2011)
+i.times <- as.data.frame(table(i.times$year, i.times$cday, i.times$hour))
+colnames(i.times) <- c("year", "day", "hour", "comments")
+@
+
+\begin{center}
+<<fig=TRUE, echo=FALSE>>=
+print(ggplot(i.times) + geom_bar(aes(hour, comments), fill = "#F8766D") + facet_grid(day ~ year) + theme_bw() + opts(title = "ISMB hourly comments each day 2008 - 2011") + scale_x_discrete(breaks = seq(0,23,by=3), labels = seq(0,23,by = 3)))
+@
+\end{center}
+
+
+\section{Most popular posts}
+<<echo=FALSE, results=tex>>=
+ismb.compop <- as.data.frame(table(ismb.comments$eid))
+ismb.compop <- ismb.compop[sort.list(ismb.compop$Freq, decreasing = T),]
+colnames(ismb.compop) <- c("eid", "comments")
+ismb.data <- list()
+ismb.data <- append(ismb.data, i2008.data)
+ismb.data <- append(ismb.data, i2009.data)
+ismb.data <- append(ismb.data, i2010.data)
+ismb.data <- append(ismb.data, i2011.data)
+ismb.posts <- data.frame(eid = sapply(ismb.data, function(x) x$`_id`), body = sapply(ismb.data, function(x) x$body), date = sapply(ismb.data, function(x) x$date))
+ismb.posts$eid <- gsub("e/", "", ismb.posts$eid)
+m <- match(ismb.compop$eid, ismb.posts$eid)
+ismb.compop$body <- ismb.posts[m, "body"]
+ismb.compop$year <- ismb.posts[m, "date"]
+ismb.compop$year <- strptime(ismb.compop$year, "%Y-%m-%dT%H:%M:%SZ")$year + 1900
+print(xtable(head(ismb.compop, 10)[, c("year" ,"body", "comments")], digits = 0), size = "small", include.rownames = FALSE)
+@
+
+\end{document}

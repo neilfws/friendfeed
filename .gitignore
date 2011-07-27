@@ -1,2 +1,5 @@
 leicester/data/
 leicester/scratch/
+ismb/docs/*.log
+ismb/docs/*.aux
+ismb/code/R/.Rhistory
