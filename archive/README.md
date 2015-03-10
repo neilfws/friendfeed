@@ -5,8 +5,7 @@ The JSON files were generated using mongoexport _e.g._
 
     mongoexport --query '{ $query: {}, $orderby: { date: 1 } }' --db friendfeed --collection the_life_scientists  --out archive/the_life_scientists.json --journal
 
-I cannot guarantee that all of the information in the original feed was captured by this process.
+I cannot guarantee that all of the information in the original feed was captured by this process. Note that the library20 feed maxed out the API at n = 13999 but has 8186 entries, so is unlikely to be complete.
 
 Commit log dates indicate when the files were generated. FriendFeed is shutting down on 2015-04-09 but I cannot promise further archives between now (2015-03-10) and that date.
-
 
