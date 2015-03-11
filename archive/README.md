@@ -3,7 +3,8 @@ This directory contains archives of FriendFeed feeds. They were captured by savi
 
 The JSON files were generated using mongoexport _e.g._
 
-    mongoexport --query '{ $query: {}, $orderby: { date: 1 } }' --db friendfeed --collection the_life_scientists  --out archive/the_life_scientists.json --journal
+    mongoexport --query '{ $query: {}, $orderby: { date: 1 } }' --db friendfeed --collection the_life_scientists 
+                --out archive/the_life_scientists.json --journal --jsonArray
 
 I cannot guarantee that all of the information in the original feed was captured by this process. Note that the library20 feed maxed out the API at n = 13999 but has 8186 entries, so is unlikely to be complete.
 
